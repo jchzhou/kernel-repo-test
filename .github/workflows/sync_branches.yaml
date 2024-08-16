@@ -1,0 +1,52 @@
+name: Sync Branches
+
+on:
+  schedule:
+    # Runs every day at midnight UTC
+    - cron: "0 0 * * *"
+
+jobs:
+  sync-branch-master:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Your Repository
+        uses: actions/checkout@v4
+
+      - name: Checkout master Branch
+        run: |
+          git checkout master
+
+      - name: Pull from torvalds/linux
+        run: |
+          git remote add upstream https://github.com/torvalds/linux
+          git fetch upstream master
+          git merge upstream/master --allow-unrelated-histories
+
+      - name: Push Changes
+        run: |
+          git push origin master
+
+  sync-branch-linux-6_6_y:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Your Repository
+        uses: actions/checkout@v4
+
+      # Checkout the branch you want to update
+      - name: Checkout linux-6.6.y Branch
+        run: |
+          git checkout linux-6.6.y
+
+      # Pull the changes from the specific branch of another repository
+      - name: Pull from torvalds/linux
+        run: |
+          git remote add upstream_gkh https://github.com/gregkh/linux
+          git fetch upstream_gkh linux-6.6.y
+          git merge upstream_gkh/linux-6.6.y --allow-unrelated-histories
+
+      # Push the changes back to your repository
+      - name: Push Changes
+        run: |
+          git push origin linux-6.6.y
