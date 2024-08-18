@@ -1,52 +1,66 @@
-name: Sync Branches
+name: Daily Update Branches
 
 on:
   schedule:
     # Runs every day at midnight UTC
-    - cron: "0 0 * * *"
+    - cron: "0 16 * * *"
+  workflow_dispatch:  # Allows manual trigger
 
 jobs:
-  sync-branch-master:
+  update-branches:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Your Repository
+      - name: Checkout the repository
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
 
-      - name: Checkout master Branch
+      - name: Configure git
         run: |
+          git config --global user.name "RVCK_Sync_Bot"
+          git config --global user.email "rvck_sync_bot@oerv.ac.cn"
+          git remote add upstream https://github.com/torvalds/linux.git
+          git remote add upstream-gregkh https://github.com/gregkh/linux.git
+
+      - name: Fetch upstream changes for 'master' branch
+        run: |
+          git fetch upstream
           git checkout master
-
-      - name: Pull from torvalds/linux
-        run: |
-          git remote add upstream https://github.com/torvalds/linux
-          git fetch upstream master
-          git merge upstream/master --allow-unrelated-histories
-
-      - name: Push Changes
-        run: |
+          git pull upstream/master --ff-only
           git push origin master
 
-  sync-branch-linux-6_6_y:
+      - name: Fetch upstream changes for 'linux-6.6.y' branch
+        run: |
+          git fetch upstream-gregkh
+          git checkout linux-6.6.y
+          git pull upstream-gregkh/linux-6.6.y --ff-only
+          git push origin linux-6.6.y
+  
+  open-issue-on-failure:
     runs-on: ubuntu-latest
+    needs: update-branches
+    if: failure()  # Runs only if the previous job failed
 
     steps:
-      - name: Checkout Your Repository
-        uses: actions/checkout@v4
-
-      # Checkout the branch you want to update
-      - name: Checkout linux-6.6.y Branch
+      - name: Create issue body
         run: |
-          git checkout linux-6.6.y
+          echo "## Workflow Failed - Branch Update Failed" > issue_body.txt
+          echo "The daily branch update workflow encountered an error." >> issue_body.txt
+          echo "" >> issue_body.txt
+          echo "**Workflow Name:** ${{ github.workflow }}" >> issue_body.txt
+          echo "**Job:** ${{ github.job }}" >> issue_body.txt
+          echo "**Run Number:** ${{ github.run_number }}" >> issue_body.txt
+          echo "**Run ID:** ${{ github.run_id }}" >> issue_body.txt
+          echo "**Timestamp:** $(date -u)" >> issue_body.txt
 
-      # Pull the changes from the specific branch of another repository
-      - name: Pull from torvalds/linux
-        run: |
-          git remote add upstream_gkh https://github.com/gregkh/linux
-          git fetch upstream_gkh linux-6.6.y
-          git merge upstream_gkh/linux-6.6.y --allow-unrelated-histories
-
-      # Push the changes back to your repository
-      - name: Push Changes
-        run: |
-          git push origin linux-6.6.y
+      - name: Create GitHub Issue
+        uses: peter-evans/create-issue-from-file@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "Workflow Failure: Daily Branch Update"
+          content-filepath: issue_body.txt
+          labels: |
+            workflow-failure
+            automation
