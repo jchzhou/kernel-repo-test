@@ -27,14 +27,14 @@ jobs:
       - name: Fetch upstream changes for 'master' branch
         run: |
           git fetch upstream
-          git checkout master
+          git checkout origin/master
           git pull upstream/master --ff-only
           git push origin master
 
       - name: Fetch upstream changes for 'linux-6.6.y' branch
         run: |
           git fetch upstream-gregkh
-          git checkout linux-6.6.y
+          git checkout origin/linux-6.6.y
           git pull upstream-gregkh/linux-6.6.y --ff-only
           git push origin linux-6.6.y
   
