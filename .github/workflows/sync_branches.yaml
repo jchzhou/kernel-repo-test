@@ -58,7 +58,7 @@ jobs:
       - name: Create GitHub Issue
         uses: peter-evans/create-issue-from-file@v5
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.KRNL_REPO_TEST }}
           title: "Workflow Failure: Daily Branch Update"
           content-filepath: issue_body.txt
           labels: |
